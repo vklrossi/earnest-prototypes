@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shift by Earnest — The pause before the purchase</title>
+  <meta name="description" content="A browser extension that meets you at checkout and shows you exactly what that money could become. Invest it, pay down loans, or save toward something that matters." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── Light warm palette ── */
+      --bg:            #F5F2EC;
+      --surface:       #FFFFFF;
+      --surface-2:     #EDEBE4;
+      --surface-3:     #E4E0D7;
+      --border:        rgba(0,0,0,0.07);
+      --border-bright: rgba(0,0,0,0.13);
+      --shadow-sm:     0 1px 4px rgba(0,0,0,0.07), 0 2px 12px rgba(0,0,0,0.04);
+      --shadow-md:     0 4px 20px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05);
+      --shadow-lg:     0 12px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+
+      /* ── Earnest brand green — deepened for light BG legibility ── */
+      --green:         #007A52;
+      --green-mid:     #009962;
+      --green-dim:     rgba(0,122,82,0.09);
+      --green-border:  rgba(0,122,82,0.25);
+
+      /* ── Earnest lavender — primary accent alongside green ── */
+      --lavender:        #6B5ED8;
+      --lavender-mid:    #8B7EE8;
+      --lavender-dim:    rgba(107,94,216,0.09);
+      --lavender-border: rgba(107,94,216,0.28);
+      --amber:         #A05F00;
+      --amber-dim:     rgba(160,95,0,0.08);
+      --amber-border:  rgba(160,95,0,0.25);
+
+      /* ── Type ── */
+      --text:          #1C1915;
+      --text-muted:    #6B6760;
+      --text-dim:      #A8A49C;
+
+      --radius:    18px;
+      --radius-sm: 11px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── SERIFS for headlines ── */
+    .serif { font-family: 'DM Serif Display', Georgia, serif; font-weight: 400; }
+
+    /* ── UTILITY ── */
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      border: 1px solid var(--border-bright);
+      color: var(--text-muted); background: var(--surface);
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1px; padding: 5px 13px; border-radius: 100px;
+      margin-bottom: 22px;
+    }
+    .chip.green  { color: var(--green);    border-color: var(--green-border);    background: var(--green-dim); }
+    .chip.purple { color: var(--lavender); border-color: var(--lavender-border); background: var(--lavender-dim); }
+    .chip.amber  { color: var(--amber);    border-color: var(--amber-border);    background: var(--amber-dim); }
+
+    .section-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: clamp(32px, 4.5vw, 54px);
+      font-weight: 400; line-height: 1.1;
+      letter-spacing: -0.5px; margin-bottom: 18px;
+      color: var(--text);
+    }
+
+    .section-title em {
+      font-style: italic;
+      background: linear-gradient(105deg, var(--green) 30%, var(--lavender-mid) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-desc {
+      font-size: 16px; color: var(--text-muted); line-height: 1.75;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--green); color: #fff;
+      font-weight: 600; font-size: 14px; letter-spacing: -0.1px;
+      padding: 12px 22px; border-radius: var(--radius-sm);
+      border: none; cursor: pointer; text-decoration: none;
+      transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+      box-shadow: 0 2px 8px rgba(0,122,82,0.28);
+    }
+    .btn-primary:hover {
+      background: var(--green-mid);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,122,82,0.35);
+    }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); color: var(--text);
+      font-weight: 500; font-size: 14px;
+      padding: 12px 22px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-bright); cursor: pointer;
+      text-decoration: none; transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-ghost:hover {
+      background: var(--bg); transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 36px; height: 62px;
+      background: rgba(245,242,236,0.88);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--text);
+    }
+
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: var(--green); border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 18px; color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-names { display: flex; flex-direction: column; line-height: 1.2; }
+    .logo-earnest {
+      font-size: 10px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-muted);
+    }
+    .logo-product {
+      font-size: 20px; font-weight: 800; letter-spacing: -0.6px;
+      color: var(--text); line-height: 1;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 2px; }
+    .nav-link {
+      color: var(--text-muted); text-decoration: none;
+      font-size: 13px; padding: 7px 14px; border-radius: 8px;
+      transition: color 0.18s, background 0.18s;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 120px 24px 80px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+
+    /* Dual-tone glow: green left, lavender right */
+    .hero::before {
+      content: '';
+      position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 540px;
+      background:
+        radial-gradient(ellipse at 35% 20%, rgba(0,122,82,0.08) 0%, transparent 55%),
+        radial-gradient(ellipse at 65% 20%, rgba(107,94,216,0.07) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(105deg, var(--green-dim), var(--lavender-dim));
+      border: 1px solid var(--lavender-border);
+      color: var(--lavender); font-size: 12px; font-weight: 500;
+      padding: 6px 14px; border-radius: 100px; margin-bottom: 36px;
+    }
+
+    .hero-badge-dot {
+      width: 6px; height: 6px;
+      background: var(--green); border-radius: 50%;
+      animation: pulse-dot 2.2s ease infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.35; transform:scale(0.7); }
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: clamp(46px, 8vw, 92px);
+      font-weight: 400; line-height: 1.05;
+      letter-spacing: -1px; max-width: 880px; margin-bottom: 28px;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      background: linear-gradient(105deg, var(--green) 30%, var(--lavender-mid) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 1.9vw, 18px);
+      color: var(--text-muted); max-width: 480px;
+      margin-bottom: 48px; line-height: 1.75;
+    }
+
+    .hero-ctas {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; margin-bottom: 80px;
+    }
+    .hero-ctas .btn-primary { font-size: 15px; padding: 14px 28px; border-radius: 13px; }
+    .hero-ctas .btn-ghost   { font-size: 15px; padding: 13px 24px; }
+
+    /* ── BROWSER DEMO ── */
+    .demo-wrapper { width: 100%; max-width: 640px; margin: 0 auto; }
+
+    .demo-browser {
+      background: #1A2030;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.09);
+      overflow: hidden;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    .demo-browser-bar {
+      background: #111622; padding: 10px 14px;
+      display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .browser-dots { display: flex; gap: 6px; }
+    .browser-dot  { width: 10px; height: 10px; border-radius: 50%; }
+    .browser-dot:nth-child(1) { background: #FF5F57; }
+    .browser-dot:nth-child(2) { background: #FEBC2E; }
+    .browser-dot:nth-child(3) { background: #28C840; }
+
+    .browser-url {
+      flex: 1; background: rgba(0,0,0,0.35); border-radius: 5px;
+      padding: 5px 12px; font-size: 11px; color: rgba(255,255,255,0.35);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .demo-checkout { padding: 22px; }
+
+    .checkout-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .checkout-store { font-size: 15px; font-weight: 700; color: #EDF2FF; }
+    .checkout-step  { font-size: 11px; color: rgba(255,255,255,0.3); }
+
+    .checkout-item {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(255,255,255,0.04); border-radius: 10px;
+      padding: 11px; margin-bottom: 9px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .checkout-thumb {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.07); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+
+    .checkout-item-info { flex: 1; }
+    .checkout-item-name   { font-size: 12px; font-weight: 500; color: #EDF2FF; }
+    .checkout-item-detail { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .checkout-item-price  { font-size: 13px; font-weight: 600; color: #EDF2FF; }
+
+    .checkout-summary {
+      margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+    .checkout-row {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: rgba(255,255,255,0.35); margin-bottom: 6px;
+    }
+    .checkout-row.total {
+      font-size: 14px; font-weight: 700; color: #EDF2FF;
+      margin-top: 8px; padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .checkout-btn {
+      width: 100%; padding: 12px; background: #0070F3;
+      color: white; border: none; border-radius: 9px;
+      font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 14px;
+    }
+
+    /* ── SHIFT OVERLAY (dark card inside dark browser — intentional contrast) ── */
+    .shift-overlay {
+      margin-top: 12px;
+      background: #0E1420;
+      border: 1px solid rgba(0,207,133,0.35);
+      border-radius: 16px; padding: 17px;
+      box-shadow: 0 0 40px rgba(0,207,133,0.07);
+      animation: overlay-in 0.55s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    @keyframes overlay-in {
+      from { opacity:0; transform:translateY(16px) scale(0.97); }
+      to   { opacity:1; transform:none; }
+    }
+
+    .overlay-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .overlay-logo {
+      width: 24px; height: 24px; background: #00CF85; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 11px; color: #000; flex-shrink: 0;
+    }
+    .overlay-brand   { font-size: 10px; font-weight: 700; color: #00CF85; text-transform: uppercase; letter-spacing: 0.6px; }
+    .overlay-sub     { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+    .overlay-dismiss {
+      margin-left: auto; width: 20px; height: 20px;
+      border-radius: 50%; background: rgba(255,255,255,0.06);
+      border: none; color: rgba(255,255,255,0.4); cursor: pointer;
+      font-size: 12px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .overlay-center {
+      text-align: center; margin-bottom: 12px;
+    }
+    .overlay-amount { font-size: 26px; font-weight: 800; color: #EDF2FF; letter-spacing: -1px; }
+    .overlay-label  { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+
+    .overlay-paths { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 11px; }
+
+    .path-card {
+      border-radius: 10px; padding: 11px 8px; text-align: center;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.03); cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .path-card:hover { transform: translateY(-1px); }
+    .path-card.invest { border-color: rgba(0,207,133,0.3); background: rgba(0,207,133,0.07); }
+    .path-card.loans  { border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.07); }
+    .path-card.goal   { border-color: rgba(246,195,74,0.3); background: rgba(246,195,74,0.07); }
+
+    .path-icon  { font-size: 16px; margin-bottom: 4px; }
+    .path-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 3px; }
+    .path-card.invest .path-label { color: #00CF85; }
+    .path-card.loans  .path-label { color: #A78BFA; }
+    .path-card.goal   .path-label { color: #F6C34A; }
+
+    .path-value { font-size: 15px; font-weight: 800; letter-spacing: -0.4px; }
+    .path-card.invest .path-value { color: #00CF85; }
+    .path-card.loans  .path-value { color: #A78BFA; }
+    .path-card.goal   .path-value { color: #F6C34A; }
+    .path-note { font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+
+    .overlay-q { font-size: 11px; color: rgba(255,255,255,0.35); text-align: center; margin-bottom: 10px; line-height: 1.5; }
+    .overlay-q strong { color: rgba(255,255,255,0.65); font-weight: 500; }
+
+    .overlay-buy-btn {
+      width: 100%; padding: 9px;
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 8px; font-size: 11px; cursor: pointer;
+    }
+
+    /* ── SHARED SECTION ── */
+    section { padding: 96px 24px; }
+
+    /* ── TENSION / WHY ── */
+    .tension { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .tension-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+
+    .tension-cards { display: flex; flex-direction: column; gap: 14px; }
+
+    .tension-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .tension-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+    .tc-icon { font-size: 24px; margin-bottom: 10px; }
+    .tension-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .tension-card p  { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── HOW IT WORKS ── */
+    .how { background: var(--bg); }
+    .how-header { text-align: center; margin-bottom: 60px; }
+
+    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+
+    .step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px 26px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .step:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+    .step::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: transparent; transition: background 0.3s;
+    }
+    .step:hover::before { background: var(--green); }
+
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--green-dim); border: 1px solid var(--green-border);
+      color: var(--green); font-weight: 700; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .step-icon { font-size: 30px; margin-bottom: 14px; }
+    .step h3   { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .step p    { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── THREE PATHS ── */
+    .paths { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .paths-header { text-align: center; margin-bottom: 56px; }
+
+    .paths-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+
+    .path-feature {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 30px 26px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    }
+    .path-feature:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .invest-f:hover { border-color: var(--green-border); }
+    .loans-f:hover  { border-color: var(--lavender-border); }
+    .goal-f:hover   { border-color: var(--amber-border); }
+
+    .pf-icon {
+      width: 46px; height: 46px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 18px;
+    }
+    .invest-f .pf-icon { background: var(--green-dim); }
+    .loans-f  .pf-icon { background: var(--lavender-dim); }
+    .goal-f   .pf-icon { background: var(--amber-dim); }
+
+    .path-feature h3 { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+    .path-feature p  { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-bottom: 20px; }
+
+    .pf-example {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px;
+    }
+    .pf-example-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-dim); margin-bottom: 8px; }
+    .pf-example-row   { display: flex; align-items: baseline; gap: 8px; }
+    .pf-spend         { font-size: 15px; font-weight: 700; color: var(--text); }
+    .pf-arrow         { font-size: 12px; color: var(--text-dim); }
+    .pf-result        { font-size: 19px; font-weight: 800; }
+    .invest-f .pf-result { color: var(--green); }
+    .loans-f  .pf-result { color: var(--lavender); }
+    .goal-f   .pf-result { color: var(--amber); }
+    .pf-result-note { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    /* ── CALCULATOR ── */
+    .calc { background: var(--bg); }
+    .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+    .calc-left .section-desc { max-width: 400px; margin-bottom: 28px; }
+
+    .calc-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 30px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .calc-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 26px;
+    }
+
+    .calc-slider-group { margin-bottom: 24px; }
+    .calc-label-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 9px; }
+    .calc-label { font-size: 13px; color: var(--text-muted); }
+    .calc-value { font-size: 17px; font-weight: 700; color: var(--text); }
+
+    input[type="range"] {
+      -webkit-appearance: none; width: 100%;
+      height: 3px; background: var(--surface-2);
+      border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px;
+      background: var(--green); border-radius: 50%; cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(0,122,82,0.15);
+      transition: transform 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    .calc-tabs {
+      display: flex; gap: 3px; margin-bottom: 22px;
+      background: var(--surface-2); border-radius: 10px; padding: 4px;
+    }
+    .calc-tab {
+      flex: 1; padding: 7px; border: none;
+      background: transparent; color: var(--text-muted);
+      font-size: 12px; font-weight: 600; border-radius: 7px;
+      cursor: pointer; transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    }
+    .calc-tab.active {
+      background: var(--surface); color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+    .calc-tab.invest.active { color: var(--green); }
+    .calc-tab.loans.active  { color: var(--lavender); }
+    .calc-tab.goal.active   { color: var(--amber); }
+
+    .calc-result {
+      border-radius: 12px; padding: 20px; text-align: center;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    .calc-result.invest { background: var(--green-dim);    border: 1px solid var(--green-border); }
+    .calc-result.loans  { background: var(--lavender-dim); border: 1px solid var(--lavender-border); }
+    .calc-result.goal   { background: var(--amber-dim);    border: 1px solid var(--amber-border); }
+
+    .calc-result-label { font-size: 11px; margin-bottom: 4px; }
+    .calc-result.invest .calc-result-label { color: var(--green); }
+    .calc-result.loans  .calc-result-label { color: var(--lavender); }
+    .calc-result.goal   .calc-result-label { color: var(--amber); }
+
+    .calc-result-amount { font-size: 46px; font-weight: 800; letter-spacing: -2px; line-height: 1.1; }
+    .calc-result.invest .calc-result-amount { color: var(--green); }
+    .calc-result.loans  .calc-result-amount { color: var(--lavender); }
+    .calc-result.goal   .calc-result-amount { color: var(--amber); }
+
+    .calc-result-note { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+    .value-grow { height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; margin-top: 18px; }
+    .value-grow-bar { height: 100%; border-radius: 2px; width: 0%; transition: width 1.6s cubic-bezier(0.4,0,0.2,1); }
+    .invest-bar { background: linear-gradient(90deg, var(--green), var(--green-mid)); }
+    .loans-bar  { background: linear-gradient(90deg, var(--lavender), var(--lavender-mid)); }
+    .goal-bar   { background: linear-gradient(90deg, var(--amber), #C87A10); }
+
+    .calc-assumption { font-size: 11px; color: var(--text-dim); margin-top: 14px; line-height: 1.6; }
+
+    /* ── CULTURE ── */
+    .culture { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .culture-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+
+    .culture-right { display: flex; flex-direction: column; gap: 14px; }
+
+    .stat-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px 26px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-number { font-size: 36px; font-weight: 800; letter-spacing: -1.5px; color: var(--green); line-height: 1.1; margin-bottom: 6px; }
+    .stat-desc   { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── THRESHOLD ── */
+    .threshold { background: var(--bg); }
+    .threshold-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+
+    .threshold-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 30px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .th-card-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-dim); margin-bottom: 24px;
+    }
+
+    .th-row { margin-bottom: 18px; }
+    .th-label { font-size: 13px; color: var(--text-muted); margin-bottom: 7px; }
+    .th-value { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+
+    .th-toggle-row { display: flex; gap: 7px; flex-wrap: wrap; }
+    .th-tag {
+      padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border); color: var(--text-muted);
+      background: var(--bg); cursor: pointer; transition: all 0.18s;
+    }
+    .th-tag.active { background: var(--green-dim); border-color: var(--green-border); color: var(--green); }
+    .th-tag:hover:not(.active) { border-color: var(--border-bright); color: var(--text); }
+
+    .th-divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    .th-site-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+    }
+    .th-site-row:last-child { border-bottom: none; }
+    .th-site-name { font-size: 13px; color: var(--text); }
+
+    .toggle {
+      width: 36px; height: 20px; border-radius: 10px; border: none;
+      cursor: pointer; position: relative; transition: background 0.22s;
+      flex-shrink: 0;
+    }
+    .toggle.on  { background: var(--green); }
+    .toggle.off { background: var(--surface-3); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; width: 14px; height: 14px;
+      background: white; border-radius: 50%; transition: left 0.22s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle.on::after  { left: 19px; }
+    .toggle.off::after { left: 3px; }
+
+    /* ── RUNNING TOTAL (personal snapshot) ── */
+    .snapshot { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+    .snapshot-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+
+    .snapshot-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .snapshot-card-header {
+      background: linear-gradient(120deg, var(--green-dim), var(--lavender-dim));
+      border-bottom: 1px solid var(--border);
+      padding: 18px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .snapshot-card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .snapshot-month      { font-size: 12px; font-weight: 500; color: var(--text-dim); }
+
+    .snapshot-hero-row {
+      padding: 28px 22px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .snapshot-shifted-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+
+    .snapshot-shifted-amount {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 52px; line-height: 1; letter-spacing: -2px;
+      color: var(--text); margin-bottom: 10px;
+    }
+
+    .snapshot-shifted-amount span { color: var(--green); }
+
+    .snapshot-projection {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--green-dim); border: 1px solid var(--green-border);
+      border-radius: 8px; padding: 7px 13px;
+    }
+
+    .snapshot-proj-text { font-size: 13px; color: var(--green); font-weight: 600; }
+    .snapshot-proj-note { font-size: 11px; color: var(--text-muted); }
+
+    .snapshot-rows { padding: 16px 22px 20px; display: flex; flex-direction: column; gap: 11px; }
+
+    .snapshot-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .snapshot-row-icon {
+      width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+
+    .snapshot-row-icon.invest  { background: var(--green-dim); }
+    .snapshot-row-icon.loans   { background: var(--lavender-dim); }
+    .snapshot-row-icon.goal    { background: var(--amber-dim); }
+
+    .snapshot-row-label { flex: 1; font-size: 13px; color: var(--text-muted); }
+    .snapshot-row-label strong { color: var(--text); font-weight: 600; }
+
+    .snapshot-row-amount { font-size: 15px; font-weight: 700; }
+    .snapshot-row-amount.invest  { color: var(--green); }
+    .snapshot-row-amount.loans   { color: var(--lavender); }
+    .snapshot-row-amount.goal    { color: var(--amber); }
+
+    .snapshot-progress-wrap { padding: 0 22px 22px; }
+    .snapshot-progress-label {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-dim); margin-bottom: 7px;
+    }
+    .snapshot-bar-bg { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+    .snapshot-bar-fill {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--green), var(--lavender-mid));
+      width: 0%; transition: width 1.6s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── MOMENTUM (community counter) ── */
+    .momentum {
+      background: var(--text); padding: 80px 24px;
+      text-align: center; position: relative; overflow: hidden;
+    }
+
+    .momentum::before {
+      content: '';
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 300px;
+      background:
+        radial-gradient(ellipse at 35% 0%, rgba(0,207,133,0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 65% 0%, rgba(139,126,232,0.10) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .momentum-eyebrow {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.2px; color: rgba(245,242,236,0.4);
+      margin-bottom: 48px;
+    }
+
+    .momentum-counters {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 2px; max-width: 880px; margin: 0 auto 56px;
+    }
+
+    .momentum-counter {
+      padding: 36px 24px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .momentum-counter:first-child { border-radius: 16px 0 0 16px; }
+    .momentum-counter:last-child  { border-radius: 0 16px 16px 0; }
+
+    .counter-number {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: clamp(36px, 5vw, 58px);
+      line-height: 1; letter-spacing: -1.5px;
+      margin-bottom: 10px;
+    }
+
+    .counter-number.green   { color: #00CF85; }
+    .counter-number.purple  { color: var(--lavender-mid); }
+    .counter-number.neutral { color: #F5F2EC; }
+
+    .counter-label { font-size: 13px; color: rgba(245,242,236,0.45); line-height: 1.55; }
+    .counter-label strong { color: rgba(245,242,236,0.8); font-weight: 500; }
+
+    .momentum-tagline {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: clamp(22px, 3.5vw, 36px);
+      color: #F5F2EC; max-width: 600px; margin: 0 auto;
+      line-height: 1.25; letter-spacing: -0.5px;
+    }
+
+    .momentum-tagline em {
+      font-style: italic;
+      background: linear-gradient(105deg, #00CF85 30%, var(--lavender-mid) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    @media (max-width: 720px) {
+      .snapshot-inner { grid-template-columns: 1fr; gap: 40px; }
+      .momentum-counters { grid-template-columns: 1fr; gap: 8px; }
+      .momentum-counter { border-radius: var(--radius) !important; }
+    }
+
+    /* ── TRUST ── */
+    .trust { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .trust-header { text-align: center; margin-bottom: 52px; }
+    .trust-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+
+    .trust-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .trust-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+    .trust-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--green-dim); display: flex; align-items: center;
+      justify-content: center; font-size: 20px; margin-bottom: 16px;
+    }
+    .trust-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 7px; }
+    .trust-card p  { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── TESTIMONIALS ── */
+    .testi { background: var(--bg); }
+    .testi-header { text-align: center; margin-bottom: 48px; }
+    .testi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+
+    .testi-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .testi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+    .testi-stars  { color: var(--amber); font-size: 13px; letter-spacing: 2px; margin-bottom: 13px; }
+    .testi-text   { font-size: 14px; line-height: 1.7; margin-bottom: 18px; color: var(--text); }
+    .testi-author { display: flex; align-items: center; gap: 11px; }
+
+    .testi-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px; flex-shrink: 0;
+    }
+    .testi-avatar.a { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+    .testi-avatar.b { background: var(--lavender-dim); color: var(--lavender); border: 1px solid var(--lavender-border); }
+    .testi-avatar.c { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-border); }
+
+    .testi-name   { font-size: 13px; font-weight: 600; }
+    .testi-handle { font-size: 11px; color: var(--text-muted); }
+
+    /* ── CTA ── */
+    .cta {
+      background: var(--text); text-align: center; padding: 112px 24px;
+      position: relative; overflow: hidden;
+    }
+    .cta::before {
+      content: '';
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 360px;
+      background:
+        radial-gradient(ellipse at 35% 0%, rgba(0,207,133,0.15) 0%, transparent 55%),
+        radial-gradient(ellipse at 65% 0%, rgba(139,126,232,0.13) 0%, transparent 55%);
+      pointer-events: none;
+    }
+
+    .cta .section-title { max-width: 680px; margin: 0 auto 18px; color: #F5F2EC; }
+    .cta .section-title em { color: #00CF85; }
+    .cta .section-desc  { max-width: 400px; margin: 0 auto 44px; color: rgba(245,242,236,0.55); }
+
+    .cta-btns {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .cta-btns .btn-primary {
+      font-size: 15px; padding: 14px 30px; border-radius: 13px;
+      background: #00CF85; color: #000; box-shadow: 0 4px 20px rgba(0,207,133,0.3);
+    }
+    .cta-btns .btn-primary:hover { background: #00E096; }
+    .cta-btns .btn-ghost {
+      font-size: 14px; padding: 13px 24px;
+      background: transparent; color: rgba(245,242,236,0.7);
+      border-color: rgba(245,242,236,0.2); box-shadow: none;
+    }
+    .cta-btns .btn-ghost:hover {
+      background: rgba(245,242,236,0.06); color: #F5F2EC;
+    }
+
+    .cta-note { font-size: 12px; color: rgba(245,242,236,0.35); }
+
+    /* ── FOOTER ── */
+    footer { background: var(--bg); border-top: 1px solid var(--border); padding: 40px 24px; }
+
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; flex-wrap: wrap;
+    }
+
+    .footer-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text-muted);
+    }
+
+    .footer-links { display: flex; gap: 22px; }
+    .footer-links a {
+      font-size: 12px; color: var(--text-dim); text-decoration: none; transition: color 0.18s;
+    }
+    .footer-links a:hover { color: var(--text-muted); }
+
+    .footer-disc {
+      font-size: 11px; color: var(--text-dim);
+      text-align: center; max-width: 1100px;
+      margin: 22px auto 0; padding-top: 22px;
+      border-top: 1px solid var(--border); line-height: 1.65;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fade-up {
+      from { opacity:0; transform:translateY(18px); }
+      to   { opacity:1; transform:none; }
+    }
+    .fade-up.visible { animation: fade-up 0.6s ease both; }
+    @media (prefers-reduced-motion: reduce) { .fade-up.visible { animation: none; } }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 880px) {
+      .tension-inner, .calc-grid, .culture-inner, .threshold-inner { grid-template-columns: 1fr; gap: 40px; }
+      .paths-grid, .steps, .trust-grid, .testi-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
+    @media (max-width: 720px) {
+      nav { padding: 0 18px; }
+      .nav-links { display: none; }
+      section { padding: 72px 20px; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+    }
+    @media (max-width: 520px) {
+      .demo-wrapper { display: none; }
+      .overlay-paths { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">
+    <div class="logo-mark">E</div>
+    <div class="logo-names">
+      <span class="logo-earnest">by Earnest</span>
+      <span class="logo-product">Shift</span>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works" class="nav-link">How it works</a>
+    <a href="#three-paths"  class="nav-link">Your goals</a>
+    <a href="#the-math"     class="nav-link">The math</a>
+    <a href="#trust"        class="nav-link">Privacy</a>
+  </div>
+  <a href="#get-started" class="btn-primary">
+    Add to Browser — Free
+  </a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    From Earnest · Now in beta
+  </div>
+
+  <h1>The pause<br>before <em>the purchase.</em></h1>
+
+  <p class="hero-sub">Shift meets you at checkout and shows you exactly what that money could do instead — invest it, pay down loans, or save toward a goal that actually matters.</p>
+
+  <div class="hero-ctas">
+    <a href="#get-started" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M6 8l2 2 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Add to Chrome — It's free
+    </a>
+    <a href="#how-it-works" class="btn-ghost">See how it works</a>
+  </div>
+
+  <!-- Browser demo -->
+  <div class="demo-wrapper fade-up" id="demo">
+    <div class="demo-browser">
+      <div class="demo-browser-bar">
+        <div class="browser-dots">
+          <div class="browser-dot"></div>
+          <div class="browser-dot"></div>
+          <div class="browser-dot"></div>
+        </div>
+        <div class="browser-url">shop.brand.com/checkout/confirm</div>
+      </div>
+      <div class="demo-checkout">
+        <div class="checkout-header">
+          <div class="checkout-store">Review your order</div>
+          <div class="checkout-step">Step 3 of 3</div>
+        </div>
+        <div class="checkout-item">
+          <div class="checkout-thumb">👜</div>
+          <div class="checkout-item-info">
+            <div class="checkout-item-name">Leather Crossbody Bag</div>
+            <div class="checkout-item-detail">Camel · Limited stock</div>
+          </div>
+          <div class="checkout-item-price">$78.00</div>
+        </div>
+        <div class="checkout-item">
+          <div class="checkout-thumb">🕶️</div>
+          <div class="checkout-item-info">
+            <div class="checkout-item-name">Retro Sunglasses</div>
+            <div class="checkout-item-detail">Tortoiseshell · One size</div>
+          </div>
+          <div class="checkout-item-price">$42.00</div>
+        </div>
+        <div class="checkout-summary">
+          <div class="checkout-row"><span>Subtotal</span><span>$120.00</span></div>
+          <div class="checkout-row"><span>Shipping</span><span>Free</span></div>
+          <div class="checkout-row total"><span>Total</span><span>$120.00</span></div>
+        </div>
+        <button class="checkout-btn" style="opacity:0.25;pointer-events:none;margin-bottom:0;">Place Order</button>
+
+        <!-- Shift overlay -->
+        <div class="shift-overlay" id="shift-overlay">
+          <div class="overlay-header">
+            <div class="overlay-logo">E</div>
+            <div>
+              <div class="overlay-brand">Earnest Shift</div>
+              <div class="overlay-sub">What could $120 do instead?</div>
+            </div>
+            <button class="overlay-dismiss" id="overlay-dismiss">×</button>
+          </div>
+
+          <div class="overlay-center">
+            <div class="overlay-amount">$120</div>
+            <div class="overlay-label">at checkout right now</div>
+          </div>
+
+          <div class="overlay-paths">
+            <div class="path-card invest">
+              <div class="path-icon">📈</div>
+              <div class="path-label">Invest it</div>
+              <div class="path-value">$465</div>
+              <div class="path-note">in 20 yrs · 7%</div>
+            </div>
+            <div class="path-card loans">
+              <div class="path-icon">🎓</div>
+              <div class="path-label">Pay loans</div>
+              <div class="path-value">$198</div>
+              <div class="path-note">saved in interest</div>
+            </div>
+            <div class="path-card goal">
+              <div class="path-icon">🌴</div>
+              <div class="path-label">Hawaii trip</div>
+              <div class="path-value">12%</div>
+              <div class="path-note">of your $1k goal</div>
+            </div>
+          </div>
+
+          <div class="overlay-q">
+            No pressure. <strong>You always decide.</strong> Shift just shows you the math.
+          </div>
+
+          <button class="overlay-buy-btn">Buy anyway — it's still my choice</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY / TENSION -->
+<section class="tension" id="why">
+  <div class="container">
+    <div class="tension-inner">
+      <div class="fade-up">
+        <div class="chip">The problem</div>
+        <div class="section-title">The deck is stacked<br>against your wallet.</div>
+        <p class="section-desc" style="max-width:420px; margin-bottom:18px;">
+          Algorithms are engineered to surface desire. One-tap checkout removes every moment of hesitation. Influencer culture turns spending into identity. No one built a tool to push back — until Earnest did.
+        </p>
+        <p class="section-desc" style="max-width:420px;">
+          Shift is the one force in your digital environment working in the opposite direction. Not by blocking you or lecturing you. Just by showing you the math you were never shown — at the exact moment it matters.
+        </p>
+      </div>
+      <div class="tension-cards fade-up">
+        <div class="tension-card">
+          <div class="tc-icon">📱</div>
+          <h3>Built to make you spend</h3>
+          <p>The average person sees 6,000–10,000 ads a day. Checkout flows are optimized to eliminate hesitation. You're navigating a billion-dollar system designed to keep your cart full.</p>
+        </div>
+        <div class="tension-card">
+          <div class="tc-icon">🧠</div>
+          <h3>Financial education is missing</h3>
+          <p>Most people were never taught what compound interest actually means in practice, or what loan amortization really costs. Shift shows you what no one did.</p>
+        </div>
+        <div class="tension-card">
+          <div class="tc-icon">🌱</div>
+          <h3>Less is more than money</h3>
+          <p>Less stuff means less clutter, less consumption, less pressure to keep up. Every purchase you choose to redirect is one step closer to a life you actually designed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how-it-works">
+  <div class="container">
+    <div class="how-header fade-up">
+      <div class="chip green">How it works</div>
+      <div class="section-title">Meets you exactly<br>where temptation lives.</div>
+    </div>
+    <div class="steps fade-up">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-icon">🔌</div>
+        <h3>Install in one click</h3>
+        <p>Add to Chrome or Firefox. No account required. Shift runs quietly in the background — completely invisible until you're at a checkout that crosses your threshold.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-icon">🛒</div>
+        <h3>Reach checkout, see the shift</h3>
+        <p>When a purchase hits your set amount — say, $30 — a gentle overlay appears showing three paths for that money. No guilt. No judgment. Just the numbers.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-icon">✨</div>
+        <h3>You decide, every time</h3>
+        <p>Redirect the money toward your goal, or buy anyway — it's always your call. Shift never blocks a purchase. It just makes sure the choice is genuinely yours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RUNNING TOTAL / PERSONAL SNAPSHOT -->
+<section class="snapshot" id="your-impact">
+  <div class="container">
+    <div class="snapshot-inner">
+      <div class="fade-up">
+        <div class="chip green">Your running total</div>
+        <div class="section-title">You've shifted $340<br>this month. That's <em>nearly $2,000.</em></div>
+        <p class="section-desc" style="max-width:400px; margin-bottom:18px;">
+          Every time you redirect a purchase, Shift keeps a tally — not just what you skipped, but what it's quietly becoming. The number that matters isn't the one you didn't spend. It's the one compounding in your corner.
+        </p>
+        <p class="section-desc" style="max-width:400px;">
+          Watch the math stack up across invest, loans, and goals in one place. Your own proof of what the pause is worth.
+        </p>
+      </div>
+
+      <div class="fade-up">
+        <div class="snapshot-card">
+          <div class="snapshot-card-header">
+            <span class="snapshot-card-title">Your Shift · June 2026</span>
+            <span class="snapshot-month">Month 3</span>
+          </div>
+
+          <div class="snapshot-hero-row">
+            <div class="snapshot-shifted-label">Total redirected this month</div>
+            <div class="snapshot-shifted-amount">$<span id="snap-total">340</span></div>
+            <div class="snapshot-projection">
+              <span class="snapshot-proj-text">≈ $<span id="snap-fv">1,978</span> in 20 years</span>
+              <span class="snapshot-proj-note">at 7% avg. return</span>
+            </div>
+          </div>
+
+          <div class="snapshot-rows">
+            <div class="snapshot-row">
+              <div class="snapshot-row-icon invest">📈</div>
+              <div class="snapshot-row-label"><strong>Invested</strong> · 4 purchases redirected</div>
+              <div class="snapshot-row-amount invest">$190</div>
+            </div>
+            <div class="snapshot-row">
+              <div class="snapshot-row-icon loans">🎓</div>
+              <div class="snapshot-row-label"><strong>Loan payments</strong> · 2 redirects</div>
+              <div class="snapshot-row-amount loans">$95</div>
+            </div>
+            <div class="snapshot-row">
+              <div class="snapshot-row-icon goal">🌴</div>
+              <div class="snapshot-row-label"><strong>Hawaii trip</strong> · 3 redirects</div>
+              <div class="snapshot-row-amount goal">$55</div>
+            </div>
+          </div>
+
+          <div class="snapshot-progress-wrap">
+            <div class="snapshot-progress-label">
+              <span>Goal: $500 this month</span>
+              <span>68% there</span>
+            </div>
+            <div class="snapshot-bar-bg">
+              <div class="snapshot-bar-fill" id="snapshot-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THREE PATHS -->
+<section class="paths" id="three-paths">
+  <div class="container">
+    <div class="paths-header fade-up">
+      <div class="chip purple">Three paths</div>
+      <div class="section-title">Your money, your goals.<br>We just show the numbers.</div>
+      <p class="section-desc" style="max-width:500px; margin:0 auto;">
+        Every time Shift appears, it surfaces three options tailored to what you told us matters. You choose which future you're building.
+      </p>
+    </div>
+    <div class="paths-grid fade-up">
+      <div class="path-feature invest-f">
+        <div class="pf-icon">📈</div>
+        <h3>Invest it</h3>
+        <p>See the future value of that exact amount if invested at a 7% average annual return — the historical S&amp;P 500 average. The math is real, and it surprises almost everyone.</p>
+        <div class="pf-example">
+          <div class="pf-example-label">Example · $50 purchase</div>
+          <div class="pf-example-row">
+            <div class="pf-spend">$50</div>
+            <div class="pf-arrow">→</div>
+            <div>
+              <div class="pf-result">$193</div>
+              <div class="pf-result-note">in 20 years at 7%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="path-feature loans-f">
+        <div class="pf-icon">🎓</div>
+        <h3>Pay down loans</h3>
+        <p>Connect your student loan or credit card balance and see how much interest you'd save by applying this purchase to your principal instead. Debt costs more than most people realize.</p>
+        <div class="pf-example">
+          <div class="pf-example-label">Example · $50 on 6.5% loan</div>
+          <div class="pf-example-row">
+            <div class="pf-spend">$50</div>
+            <div class="pf-arrow">→</div>
+            <div>
+              <div class="pf-result">$84</div>
+              <div class="pf-result-note">saved in interest</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="path-feature goal-f">
+        <div class="pf-icon">🎯</div>
+        <h3>Save toward a goal</h3>
+        <p>Set a goal — a trip, a wedding, a first apartment, an emergency fund — and see each purchase as a percentage of that goal. Suddenly the math hits differently.</p>
+        <div class="pf-example">
+          <div class="pf-example-label">Example · $50 toward Hawaii ($2k)</div>
+          <div class="pf-example-row">
+            <div class="pf-spend">$50</div>
+            <div class="pf-arrow">→</div>
+            <div>
+              <div class="pf-result">2.5%</div>
+              <div class="pf-result-note">of your goal, done</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CALCULATOR -->
+<section class="calc" id="the-math">
+  <div class="container">
+    <div class="calc-grid">
+      <div class="calc-left fade-up">
+        <div class="chip green">The math</div>
+        <div class="section-title">Impulse buys have<br>a hidden price tag.</div>
+        <p class="section-desc">
+          Every dollar spent today is a dollar that stops compounding. At 7% annual return — the long-run S&amp;P average — even modest amounts become something you'd notice.
+        </p>
+        <br>
+        <a href="#get-started" class="btn-primary" style="margin-top:8px;">Start using Shift →</a>
+      </div>
+      <div class="fade-up">
+        <div class="calc-card">
+          <div class="calc-title">Run the numbers yourself</div>
+          <div class="calc-tabs">
+            <button class="calc-tab invest active" id="tab-invest" onclick="switchTab('invest')">📈 Invest</button>
+            <button class="calc-tab loans"          id="tab-loans"  onclick="switchTab('loans')">🎓 Loans</button>
+            <button class="calc-tab goal"           id="tab-goal"   onclick="switchTab('goal')">🎯 Goal</button>
+          </div>
+
+          <div class="calc-slider-group">
+            <div class="calc-label-row">
+              <span class="calc-label">Purchase amount</span>
+              <span class="calc-value" id="amount-display">$50</span>
+            </div>
+            <input type="range" id="amount-slider" min="5" max="1000" step="5" value="50" />
+          </div>
+
+          <div id="invest-fields">
+            <div class="calc-slider-group">
+              <div class="calc-label-row">
+                <span class="calc-label">Years invested</span>
+                <span class="calc-value" id="years-display">10 yrs</span>
+              </div>
+              <input type="range" id="years-slider" min="1" max="40" step="1" value="10" />
+            </div>
+            <div class="calc-slider-group">
+              <div class="calc-label-row">
+                <span class="calc-label">Annual return</span>
+                <span class="calc-value" id="rate-display">7%</span>
+              </div>
+              <input type="range" id="rate-slider" min="3" max="12" step="0.5" value="7" />
+            </div>
+          </div>
+
+          <div id="loans-fields" style="display:none;">
+            <div class="calc-slider-group">
+              <div class="calc-label-row">
+                <span class="calc-label">Loan interest rate</span>
+                <span class="calc-value" id="loan-rate-display">6.5%</span>
+              </div>
+              <input type="range" id="loan-rate-slider" min="1" max="25" step="0.5" value="6.5" />
+            </div>
+            <div class="calc-slider-group">
+              <div class="calc-label-row">
+                <span class="calc-label">Months remaining</span>
+                <span class="calc-value" id="loan-months-display">120 mo</span>
+              </div>
+              <input type="range" id="loan-months-slider" min="6" max="360" step="6" value="120" />
+            </div>
+          </div>
+
+          <div id="goal-fields" style="display:none;">
+            <div class="calc-slider-group">
+              <div class="calc-label-row">
+                <span class="calc-label">Your savings goal</span>
+                <span class="calc-value" id="goal-display">$2,000</span>
+              </div>
+              <input type="range" id="goal-slider" min="100" max="20000" step="100" value="2000" />
+            </div>
+          </div>
+
+          <div class="calc-result invest" id="calc-result">
+            <div class="calc-result-label" id="result-label">Future value if invested</div>
+            <div class="calc-result-amount" id="future-value">$98</div>
+            <div class="calc-result-note" id="result-note">vs. $50 spent today</div>
+          </div>
+
+          <div class="value-grow">
+            <div class="value-grow-bar invest-bar" id="progress-bar"></div>
+          </div>
+
+          <div class="calc-assumption">* Invest: annual compounding. Loans: approximate interest saved on amortization. Past returns don't guarantee future results.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CULTURE -->
+<section class="culture" id="culture">
+  <div class="container">
+    <div class="culture-inner">
+      <div class="fade-up">
+        <div class="chip amber">The bigger picture</div>
+        <div class="section-title">One tool pushing<br>in the other direction.</div>
+        <p class="section-desc" style="max-width:400px; margin-bottom:18px;">
+          We grew up being told to skip the daily coffee to get rich. Meanwhile, algorithms got smarter, checkout got frictionless, and "treat yourself" became a cultural default.
+        </p>
+        <p class="section-desc" style="max-width:400px; margin-bottom:18px;">
+          The internal bargain — <em>"if I skip dinner out this week, I can afford this"</em> — is familiar to all of us. Shift makes that math literal, and shows you the other side of the ledger.
+        </p>
+        <p class="section-desc" style="max-width:400px;">
+          Financial mindfulness, at the exact moment it can actually do something.
+        </p>
+      </div>
+      <div class="culture-right fade-up">
+        <div class="stat-card">
+          <div class="stat-number">$314B</div>
+          <div class="stat-desc">spent annually on impulse purchases in the US — an average of $314 per person per month (Forbes, 2023).</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">73%</div>
+          <div class="stat-desc">of Gen Z say social media makes them feel pressure to spend money they don't have (CNBC/Morning Consult, 2024).</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" style="color:var(--lavender);">57%</div>
+          <div class="stat-desc">of Americans live paycheck to paycheck — even among six-figure earners, nearly half struggle to save (LendingClub, 2025).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- YOUR THRESHOLD -->
+<section class="threshold" id="your-way">
+  <div class="container">
+    <div class="threshold-inner">
+      <div class="fade-up">
+        <div class="chip">Your rules</div>
+        <div class="section-title">Shift shows up<br>when <em>you</em> want it to.</div>
+        <p class="section-desc" style="max-width:400px; margin-bottom:18px;">
+          Set the dollar amount that triggers the nudge. Skip certain sites entirely. Pause it when you're doing intentional shopping. You're in control of how much thinking you want Shift to prompt.
+        </p>
+        <p class="section-desc" style="max-width:400px;">
+          No nannying. No pop-ups on your $4 toothpaste. Just a gentle pause when the number crosses the line you drew.
+        </p>
+      </div>
+      <div class="fade-up">
+        <div class="threshold-card">
+          <div class="th-card-title">Your Shift settings</div>
+
+          <div class="th-row">
+            <div class="th-label">Nudge me on purchases over</div>
+            <div class="th-value" id="th-value-display">$30</div>
+            <input type="range" id="th-slider" min="5" max="500" step="5" value="30" style="margin-bottom:14px;" />
+            <div class="th-toggle-row">
+              <button class="th-tag active" onclick="setThreshold(this,10)">$10</button>
+              <button class="th-tag"        onclick="setThreshold(this,30)">$30</button>
+              <button class="th-tag"        onclick="setThreshold(this,50)">$50</button>
+              <button class="th-tag"        onclick="setThreshold(this,100)">$100</button>
+            </div>
+          </div>
+
+          <div class="th-divider"></div>
+
+          <div class="th-label" style="margin-bottom:12px;">Active on</div>
+          <div class="th-site-row">
+            <span class="th-site-name">All shopping sites</span>
+            <button class="toggle on" title="Toggle"></button>
+          </div>
+          <div class="th-site-row">
+            <span class="th-site-name">Amazon</span>
+            <button class="toggle on" title="Toggle"></button>
+          </div>
+          <div class="th-site-row">
+            <span class="th-site-name">ASOS / fashion sites</span>
+            <button class="toggle on" title="Toggle"></button>
+          </div>
+          <div class="th-site-row">
+            <span class="th-site-name">Grocery &amp; essentials</span>
+            <button class="toggle off" title="Toggle"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST -->
+<section class="trust" id="trust">
+  <div class="container">
+    <div class="trust-header fade-up">
+      <div class="chip green">Built right</div>
+      <div class="section-title">Your money. Your data.<br>Your call, always.</div>
+    </div>
+    <div class="trust-grid fade-up">
+      <div class="trust-card">
+        <div class="trust-icon">🔒</div>
+        <h3>We never touch your cart</h3>
+        <p>Shift is read-only at checkout. It detects the total and shows the overlay — nothing is modified, captured, or sent anywhere without your explicit action.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🏦</div>
+        <h3>Bank-grade security</h3>
+        <p>Investment redirects are held at FDIC/SIPC-insured partner institutions. Account linking uses Plaid — the same infrastructure behind millions of trusted apps.</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🎛️</div>
+        <h3>A nudge, not a lock</h3>
+        <p>Every overlay has a "buy anyway" option. Shift is a pause, not a gate. Disable per-site, per-session, or entirely — from the extension icon, instantly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testi">
+  <div class="container">
+    <div class="testi-header fade-up">
+      <div class="chip">Early users</div>
+      <div class="section-title">The pause changed something.</div>
+    </div>
+    <div class="testi-grid fade-up">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"I was about to buy a $90 jacket I'd impulse-clicked from TikTok. Shift showed me it'd be $348 in 15 years. I actually laughed — and closed the tab. That has literally never happened to me."</div>
+        <div class="testi-author">
+          <div class="testi-avatar a">MK</div>
+          <div>
+            <div class="testi-name">Maya K.</div>
+            <div class="testi-handle">Beta user · Chicago</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"I set my goal to 'emergency fund' and now every checkout shows how close I am. It reframes the whole decision. I've redirected over $600 in two months and I don't feel deprived at all."</div>
+        <div class="testi-author">
+          <div class="testi-avatar b">JL</div>
+          <div>
+            <div class="testi-name">Jordan L.</div>
+            <div class="testi-handle">Beta user · Austin</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <div class="testi-text">"The student loan view genuinely shocked me. Paying $80 toward my loan saves $130 in interest? I had no idea. I wish I had Shift five years ago when I was signing those papers."</div>
+        <div class="testi-author">
+          <div class="testi-avatar c">SR</div>
+          <div>
+            <div class="testi-name">Sofia R.</div>
+            <div class="testi-handle">Beta user · New York</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MOMENTUM -->
+<section class="momentum" id="momentum">
+  <div class="momentum-eyebrow">Shift in numbers</div>
+
+  <div class="momentum-counters">
+    <div class="momentum-counter">
+      <div class="counter-number green" data-target="2847193" id="cnt-shifted">$0</div>
+      <div class="counter-label"><strong>shifted by beta users</strong><br>in the last 30 days</div>
+    </div>
+    <div class="momentum-counter">
+      <div class="counter-number purple" data-target="11034719" id="cnt-fv">$0</div>
+      <div class="counter-label"><strong>in future value</strong><br>that money is now building</div>
+    </div>
+    <div class="momentum-counter">
+      <div class="counter-number neutral" data-target="9412" id="cnt-nudges">0</div>
+      <div class="counter-label"><strong>pauses taken</strong><br>at the moment of temptation</div>
+    </div>
+  </div>
+
+  <div class="momentum-tagline">
+    One quiet pause at checkout.<br><em>Compounding quietly ever after.</em>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta" id="get-started">
+  <div class="chip green" style="margin-bottom:22px;">Get started</div>
+  <div class="section-title">One install.<br><em>A different relationship with money.</em></div>
+  <p class="section-desc">Free forever for personal use. No credit card. Works on any shopping site.</p>
+
+  <div class="cta-btns">
+    <a href="#" class="btn-primary">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="9" cy="9" r="2.5" fill="currentColor"/>
+        <path d="M9 2C9 2 11.5 5 11.5 9C11.5 13 9 16 9 16" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M9 2C9 2 6.5 5 6.5 9C6.5 13 9 16 9 16" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M2 9H16" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Add to Chrome — Free
+    </a>
+    <a href="#" class="btn-ghost">Firefox Add-on →</a>
+  </div>
+  <div class="cta-note">Chrome, Firefox &amp; Edge · No account required · Pause or uninstall any time</div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo-mark" style="width:28px;height:28px;font-size:13px;">E</div>
+      <span>Earnest · Shift · 2026</span>
+    </div>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Security</a>
+      <a href="#">Blog</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+  <div class="footer-disc">
+    Shift is a product of Earnest. Earnest is not a registered investment adviser. Future value calculations are projections for illustrative purposes only based on user-selected assumptions. Investing involves risk, including possible loss of principal. Past market performance does not guarantee future results.
+  </div>
+</footer>
+
+<script>
+  // ── Calculator ──
+  let activeTab = 'invest';
+
+  function fmt(n) {
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+    return '$' + Math.round(n).toLocaleString();
+  }
+
+  function switchTab(tab) {
+    activeTab = tab;
+    ['invest','loans','goal'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      const f = document.getElementById(t + '-fields');
+      if (f) f.style.display = t === tab ? '' : 'none';
+    });
+    const res = document.getElementById('calc-result');
+    const bar = document.getElementById('progress-bar');
+    res.className = 'calc-result ' + tab;
+    bar.className = 'value-grow-bar ' + tab + '-bar';
+    updateCalc();
+  }
+
+  function updateCalc() {
+    const amount = parseFloat(document.getElementById('amount-slider').value);
+    document.getElementById('amount-display').textContent = '$' + amount.toLocaleString();
+
+    if (activeTab === 'invest') {
+      const years = parseFloat(document.getElementById('years-slider').value);
+      const rate  = parseFloat(document.getElementById('rate-slider').value);
+      document.getElementById('years-display').textContent = years + ' yr' + (years === 1 ? '' : 's');
+      document.getElementById('rate-display').textContent  = rate + '%';
+      const fv = amount * Math.pow(1 + rate/100, years);
+      document.getElementById('future-value').textContent = fmt(fv);
+      document.getElementById('result-label').textContent = 'Future value if invested';
+      document.getElementById('result-note').textContent  = 'vs. $' + amount.toLocaleString() + ' spent today';
+      const pct = Math.min(100, ((fv/amount - 1) / 9) * 100);
+      setTimeout(() => { document.getElementById('progress-bar').style.width = pct + '%'; }, 80);
+
+    } else if (activeTab === 'loans') {
+      const r  = parseFloat(document.getElementById('loan-rate-slider').value);
+      const mo = parseFloat(document.getElementById('loan-months-slider').value);
+      document.getElementById('loan-rate-display').textContent   = r + '%';
+      document.getElementById('loan-months-display').textContent = mo + ' mo';
+      const interestSaved = amount * (r/100/12) * mo * 0.55;
+      document.getElementById('future-value').textContent = fmt(interestSaved);
+      document.getElementById('result-label').textContent = 'Approximate interest saved';
+      document.getElementById('result-note').textContent  = 'by applying $' + amount.toLocaleString() + ' to your principal';
+      const pct = Math.min(100, (interestSaved / amount) * 100);
+      setTimeout(() => { document.getElementById('progress-bar').style.width = pct + '%'; }, 80);
+
+    } else {
+      const goal = parseFloat(document.getElementById('goal-slider').value);
+      document.getElementById('goal-display').textContent = '$' + goal.toLocaleString();
+      const pctGoal = (amount / goal) * 100;
+      document.getElementById('future-value').textContent = pctGoal.toFixed(1) + '%';
+      document.getElementById('result-label').textContent = 'of your goal, completed';
+      document.getElementById('result-note').textContent  = '$' + amount.toLocaleString() + ' of $' + goal.toLocaleString() + ' goal';
+      setTimeout(() => { document.getElementById('progress-bar').style.width = Math.min(100, pctGoal) + '%'; }, 80);
+    }
+  }
+
+  ['amount-slider','years-slider','rate-slider','loan-rate-slider','loan-months-slider','goal-slider']
+    .forEach(id => document.getElementById(id).addEventListener('input', updateCalc));
+
+  updateCalc();
+
+  // ── Threshold slider ──
+  const thSlider  = document.getElementById('th-slider');
+  const thDisplay = document.getElementById('th-value-display');
+  thSlider.addEventListener('input', () => { thDisplay.textContent = '$' + thSlider.value; });
+
+  function setThreshold(el, val) {
+    document.querySelectorAll('.th-tag').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    thSlider.value = val;
+    thDisplay.textContent = '$' + val;
+  }
+
+  // ── Toggles ──
+  document.querySelectorAll('.toggle').forEach(btn => {
+    btn.addEventListener('click', () => { btn.classList.toggle('on'); btn.classList.toggle('off'); });
+  });
+
+  // ── Overlay dismiss ──
+  document.getElementById('overlay-dismiss').addEventListener('click', function() {
+    const o = document.getElementById('shift-overlay');
+    o.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+    o.style.opacity    = '0';
+    o.style.transform  = 'translateY(10px) scale(0.97)';
+    o.style.pointerEvents = 'none';
+    const btn = document.querySelector('.checkout-btn');
+    btn.style.transition = 'opacity 0.3s';
+    btn.style.opacity    = '1';
+    btn.style.pointerEvents = 'auto';
+  });
+
+  // ── Scroll animations ──
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 70);
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.fade-up').forEach(el => io.observe(el));
+  setTimeout(() => document.getElementById('demo').classList.add('visible'), 260);
+
+  // ── Calc progress bar on scroll-in ──
+  const calcIO = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) { setTimeout(updateCalc, 150); calcIO.disconnect(); }
+  }, { threshold: 0.4 });
+  const cc = document.querySelector('.calc-card');
+  if (cc) calcIO.observe(cc);
+
+  // ── Snapshot bar on scroll-in ──
+  const snapBar = document.getElementById('snapshot-bar');
+  if (snapBar) {
+    const snapIO = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setTimeout(() => { snapBar.style.width = '68%'; }, 200);
+        snapIO.disconnect();
+      }
+    }, { threshold: 0.5 });
+    snapIO.observe(snapBar.closest('.snapshot-card'));
+  }
+
+  // ── Momentum counters ──
+  function fmtCounter(n, prefix) {
+    if (n >= 1e6) return prefix + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return prefix + (n/1e3).toFixed(0) + 'K';
+    return prefix + Math.round(n).toLocaleString();
+  }
+
+  function animateCounter(el, target, prefix, duration) {
+    const start = performance.now();
+    function tick(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = fmtCounter(Math.round(eased * target), prefix);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  const momentumSection = document.getElementById('momentum');
+  if (momentumSection) {
+    let fired = false;
+    const momIO = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !fired) {
+        fired = true;
+        animateCounter(document.getElementById('cnt-shifted'), 2847193, '$', 2200);
+        setTimeout(() => animateCounter(document.getElementById('cnt-fv'), 11034719, '$', 2400), 120);
+        setTimeout(() => animateCounter(document.getElementById('cnt-nudges'), 9412, '', 1800), 240);
+        momIO.disconnect();
+      }
+    }, { threshold: 0.3 });
+    momIO.observe(momentumSection);
+  }
+</script>
+</body>
+</html>
